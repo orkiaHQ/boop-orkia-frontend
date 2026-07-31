@@ -1,0 +1,15 @@
+.sidebar .nav-label {
+  width: calc(100% - 14px);
+  height: 18px;
+  margin: 22px 7px 7px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.sidebar .workspace-trigger + .nav-label { margin-top: 13px; }
+.sidebar .nav-label:hover { color: var(--text); }
+.sidebar .nav-label .icon { transition: transform .15s ease; }
+.sidebar .nav-label.collapsed .icon { transform: rotate(-90deg); }
