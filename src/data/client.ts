@@ -1,9 +1,9 @@
 import { GraphQLClient } from 'graphql-request'
 
-const endpoint = import.meta.env.VITE_GRAPHQL_ENDPOINT ?? '/api/graphql'
+const endpoint = import.meta.env.VITE_GRAPHQL_ENDPOINT ?? new URL('/graphql', window.location.origin).toString()
 
-/** GraphQL transport; inject auth in one place when the real API is connected. */
-export const gql = new GraphQLClient(endpoint)
+/** Single authenticated transport for every Orkia domain query and mutation. */
+export const gql = new GraphQLClient(endpoint, { credentials: 'include' })
 
 export type SyncMessage<T = unknown> = { type: string; entity: string; payload: T }
 
@@ -12,7 +12,7 @@ export type SyncMessage<T = unknown> = { type: string; entity: string; payload: 
  * optimistic writes remain available offline and a WebSocket event can later
  * reconcile the same entity without coupling UI components to a data vendor.
  */
-export function createPersistentCache(namespace = 'riftr-cache') {
+export function createPersistentCache(namespace = 'orkia-cache') {
   const key = (name: string) => `${namespace}:${name}`
   return {
     read<T>(name: string, fallback: T): T {

@@ -1,0 +1,52 @@
+.login-page {
+  position: relative;
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 32px;
+  background: var(--canvas);
+  color: var(--text);
+}
+
+.login-backdrop { position: absolute; inset: 0; pointer-events: none; }
+.login-backdrop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: .55;
+  background-image: linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size: 42px 42px;
+  mask-image: radial-gradient(circle at center,#000 0,transparent 70%);
+}
+.login-backdrop i { position: absolute; border-radius: 50%; filter: blur(1px); }
+.login-backdrop i:nth-child(1) { top: 14%; left: 13%; width: 220px; height: 220px; background: color-mix(in lch,var(--purple) 10%,transparent); }
+.login-backdrop i:nth-child(2) { right: 12%; bottom: 7%; width: 290px; height: 290px; background: color-mix(in lch,#2da44e 8%,transparent); }
+.login-backdrop i:nth-child(3) { top: 7%; right: 28%; width: 90px; height: 90px; background: color-mix(in lch,var(--purple) 9%,transparent); }
+
+.login-shell { position: relative; z-index: 1; width: min(430px,100%); }
+.login-shell > header { display: flex; align-items: center; justify-content: center; gap: 9px; margin-bottom: 20px; }
+.login-shell > header b { font-size: 17px; letter-spacing: -.02em; }
+.login-brand { display: grid; place-items: center; width: 27px; height: 27px; border-radius: 8px; background: var(--text); color: var(--surface); font-size: 12px; font-weight: 750; }
+.login-card { padding: 32px; border: 1px solid var(--border); border-radius: 15px; background: color-mix(in lch,var(--surface) 94%,transparent); box-shadow: 0 18px 55px #0000000d,0 2px 8px #0000000a; backdrop-filter: blur(16px); }
+.login-card > small { color: var(--purple); font-size: 9px; font-weight: 700; letter-spacing: .1em; }
+.login-card h1 { max-width: 330px; margin: 10px 0 11px; font-size: 26px; line-height: 1.12; letter-spacing: -.04em; }
+.login-card > p { margin: 0 0 24px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.github-login { height: 43px; display: grid; grid-template-columns: 19px 1fr auto; align-items: center; gap: 10px; padding: 0 14px; border-radius: 8px; background: var(--text); color: var(--surface); font-size: 12px; font-weight: 650; text-decoration: none; transition: transform .15s ease,opacity .15s ease; }
+.github-login:hover { opacity: .9; transform: translateY(-1px); }
+.github-login:focus-visible { outline: 2px solid var(--purple); outline-offset: 3px; }
+.github-login svg { width: 19px; height: 19px; }
+.github-login strong { font-size: 15px; font-weight: 400; }
+.login-trust { display: grid; gap: 13px; margin-top: 24px; padding-top: 21px; border-top: 1px solid var(--border); }
+.login-trust span { position: relative; display: grid; gap: 3px; padding-left: 17px; }
+.login-trust span::before { content: '✓'; position: absolute; top: 1px; left: 0; color: #2da44e; font-size: 9px; font-weight: 700; }
+.login-trust b { font-size: 10px; }
+.login-trust small { color: var(--faint); font-size: 9px; line-height: 1.45; }
+.login-card > em { display: block; margin-top: 16px; color: var(--faint); font-size: 9px; font-style: normal; text-align: center; }
+.login-shell > footer { max-width: 350px; margin: 15px auto 0; color: var(--faint); font-size: 9px; line-height: 1.45; text-align: center; }
+
+@media (max-width: 520px) {
+  .login-page { padding: 18px; }
+  .login-card { padding: 25px 22px; }
+  .login-card h1 { font-size: 23px; }
+}

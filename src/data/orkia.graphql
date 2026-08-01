@@ -1,0 +1,87 @@
+query Viewer {
+  viewer { id login displayName avatarUrl }
+}
+
+query Profile {
+  profile {
+    id login displayName avatarUrl headline bio location website followers following stars
+    note { title body }
+    focus { title description }
+    collaboration { title description }
+    organizations { id slug displayName role source }
+    projects { id namespace slug displayName description visibility languages syncState role }
+    roles { repositoryId namespace repository role source description }
+    activity { id kind entityType entityId payload occurredAt }
+    contributionRhythm { date orkia github }
+  }
+}
+
+mutation UpdateProfile($input: UpdateProfileInput!) {
+  updateProfile(input: $input) {
+    id login displayName avatarUrl headline bio location website followers following stars
+    note { title body }
+    focus { title description }
+    collaboration { title description }
+    organizations { id slug displayName role source }
+    projects { id namespace slug displayName description visibility languages syncState role }
+    roles { repositoryId namespace repository role source description }
+    activity { id kind entityType entityId payload occurredAt }
+    contributionRhythm { date orkia github }
+  }
+}
+
+query Repositories {
+  repositories {
+    id namespace slug displayName visibility defaultBranch description readmeMarkdown
+    licenseSpdx languages counters revision syncState lastSyncedAt
+  }
+}
+
+query Inbox($state: String) {
+  inbox(stateFilter: $state) {
+    id threadId kind title summary state priority repositoryId subject createdAt updatedAt
+  }
+}
+
+query Feed {
+  feed { id kind title summary repositoryId payload occurredAt }
+}
+
+query PublicRepository($namespace: String!, $slug: String!) {
+  publicRepository(namespace: $namespace, slug: $slug) {
+    id namespace slug displayName visibility defaultBranch description readmeMarkdown
+    licenseSpdx languages counters revision syncState lastSyncedAt
+  }
+}
+
+query RepositoryOperations($id: UUID!) {
+  repositoryOperations(id: $id) {
+    repositoryId openConflicts pendingSync failedSync openPullRequests pendingReviews
+    pendingGates activePolicy recentFailures
+  }
+}
+
+mutation SyncRepository($id: UUID!) {
+  syncRepository(id: $id)
+}
+
+mutation ImportGithubRepositories {
+  importGithubRepositories {
+    id namespace slug displayName visibility defaultBranch description readmeMarkdown
+    licenseSpdx languages counters revision syncState lastSyncedAt
+  }
+}
+
+mutation CreateIssue($repositoryId: UUID!, $idempotencyKey: String!, $title: String!, $body: String!) {
+  createIssue(
+    repositoryId: $repositoryId
+    idempotencyKey: $idempotencyKey
+    input: { title: $title, body: $body }
+  ) { id repositoryId number title body state revision syncState createdAt updatedAt }
+}
+
+mutation UpdateInbox($itemId: UUID!, $state: String!) {
+  updateInbox(itemId: $itemId, stateValue: $state) {
+    id threadId kind title summary state priority repositoryId subject createdAt updatedAt
+  }
+}

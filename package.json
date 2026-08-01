@@ -1,22 +1,28 @@
 {
-  "name": "riftr-linear-github",
+  "name": "orkia-workspace",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "generate:api": "graphql-codegen --config codegen.ts",
+    "generate:api:watch": "graphql-codegen --config codegen.ts --watch",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@solidjs/router": "^0.15.3",
-    "graphql": "^16.11.0",
-    "graphql-request": "^7.2.0",
-    "solid-js": "^1.9.7"
+    "@solidjs/router": "~1.0.0",
+    "@tanstack/solid-query": "~5.101.4",
+    "graphql": "~16.14.2",
+    "graphql-request": "~7.4.0",
+    "solid-js": "~1.9.14"
   },
   "devDependencies": {
-    "typescript": "~5.8.3",
-    "vite": "^6.3.5",
-    "vite-plugin-solid": "^2.11.6"
+    "@graphql-codegen/cli": "~7.2.0",
+    "@graphql-codegen/client-preset": "~6.1.0",
+    "@parcel/watcher": "~2.6.0",
+    "typescript": "~5.9.3",
+    "vite": "~8.2.0",
+    "vite-plugin-solid": "~2.11.14"
   }
 }

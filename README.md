@@ -1,6 +1,6 @@
-# Riftr Linear prototype
+# Orkia workspace
 
-SolidJS + TypeScript prototype for a Linear-shaped workspace with closable view tabs.
+SolidJS + TypeScript workspace for Orkia's repository, review and agent views.
 
 ## Run
 
