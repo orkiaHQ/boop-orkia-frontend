@@ -20,4 +20,6 @@ VITE_GRAPHQL_ENDPOINT=https://api.example.com/graphql
 VITE_SYNC_WS_URL=wss://api.example.com/workspace-sync
 ```
 
+For the Phase 0 local stack, use `VITE_GRAPHQL_ENDPOINT=http://127.0.0.1:18080/graphql`.
+
 The UI stores tab/session preferences locally. A production data layer can use `createPersistentCache` for optimistic GraphQL entities, then reconcile them through `connectWorkspaceSync` events.
