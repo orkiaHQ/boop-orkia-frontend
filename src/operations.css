@@ -77,6 +77,9 @@
 .ops-access p:nth-last-child(-n+2) { border-bottom: 0; }
 .ops-access b { font-size: 15px; }
 .ops-access span { color: var(--muted); font-size: 8px; }
+.change-detection-card { margin-bottom: 14px; }
+.change-detection-card .detection-badge { padding: 4px 7px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 8px; text-transform: uppercase; letter-spacing: .04em; }
+.change-detection-card .ops-empty { margin: 0; padding: 13px; color: var(--muted); font-size: 10px; }
 @media (max-width: 1100px) {
   .ops-summary { grid-template-columns: 1fr 1fr; }
   .ops-summary article:nth-child(3) { border-left: 0; border-top: 1px solid var(--border); }
