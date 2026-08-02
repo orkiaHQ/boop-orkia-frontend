@@ -61,6 +61,10 @@ query RepositoryOperations($id: UUID!) {
   }
 }
 
+query RepositoryChangeSets($repositoryId: UUID!) {
+  repositoryChangeSets(repositoryId: $repositoryId)
+}
+
 mutation SyncRepository($id: UUID!) {
   syncRepository(id: $id)
 }

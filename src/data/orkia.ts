@@ -5,6 +5,7 @@ import {
   ImportGithubRepositoriesDocument,
   ProfileDocument,
   PublicRepositoryDocument,
+  RepositoryChangeSetsDocument,
   RepositoriesDocument,
   RepositoryOperationsDocument,
   SyncRepositoryDocument,
@@ -15,6 +16,7 @@ import {
   type InboxQuery,
   type ProfileQuery,
   type RepositoriesQuery,
+  type RepositoryChangeSetsQuery,
   type RepositoryOperationsQuery,
   type ViewerQuery,
   type UpdateProfileInput,
@@ -31,6 +33,7 @@ export type RepositoryOperations = Omit<GeneratedRepositoryOperations, 'activePo
   activePolicy?: { version: number; definition: unknown } | null
   recentFailures: unknown[]
 }
+export type RepositoryChangeSetDetection = RepositoryChangeSetsQuery['repositoryChangeSets']
 
 export const orkiaApi = {
   me: async () => (await gql.request(ViewerDocument)).viewer,
@@ -52,6 +55,8 @@ export const orkiaApi = {
     const value = (await gql.request(RepositoryOperationsDocument, { id })).repositoryOperations
     return value as RepositoryOperations
   },
+  repositoryChangeSets: async (repositoryId: string) =>
+    (await gql.request(RepositoryChangeSetsDocument, { repositoryId })).repositoryChangeSets,
   syncRepository: async (id: string) => {
     await gql.request(SyncRepositoryDocument, { id })
   },

@@ -63,6 +63,13 @@ export type RepositoryOperationsQueryVariables = Exact<{
 
 export type RepositoryOperationsQuery = { repositoryOperations: { repositoryId: string, openConflicts: number, pendingSync: number, failedSync: number, openPullRequests: number, pendingReviews: number, pendingGates: number, activePolicy: unknown, recentFailures: unknown } };
 
+export type RepositoryChangeSetsQueryVariables = Exact<{
+  repositoryId: string;
+}>;
+
+
+export type RepositoryChangeSetsQuery = { repositoryChangeSets: unknown };
+
 export type SyncRepositoryMutationVariables = Exact<{
   id: string;
 }>;
@@ -343,6 +350,11 @@ export const RepositoryOperationsDocument = new TypedDocumentString(`
   }
 }
     `) as unknown as TypedDocumentString<RepositoryOperationsQuery, RepositoryOperationsQueryVariables>;
+export const RepositoryChangeSetsDocument = new TypedDocumentString(`
+    query RepositoryChangeSets($repositoryId: UUID!) {
+  repositoryChangeSets(repositoryId: $repositoryId)
+}
+    `) as unknown as TypedDocumentString<RepositoryChangeSetsQuery, RepositoryChangeSetsQueryVariables>;
 export const SyncRepositoryDocument = new TypedDocumentString(`
     mutation SyncRepository($id: UUID!) {
   syncRepository(id: $id)
