@@ -65,6 +65,10 @@ query RepositoryChangeSets($repositoryId: UUID!) {
   repositoryChangeSets(repositoryId: $repositoryId)
 }
 
+query RepositoryCanonicalChangeSets($repositoryId: UUID!) {
+  repositoryCanonicalChangeSets(repositoryId: $repositoryId)
+}
+
 mutation SyncRepository($id: UUID!) {
   syncRepository(id: $id)
 }

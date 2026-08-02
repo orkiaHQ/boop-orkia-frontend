@@ -6,6 +6,7 @@ import {
   ProfileDocument,
   PublicRepositoryDocument,
   RepositoryChangeSetsDocument,
+  RepositoryCanonicalChangeSetsDocument,
   RepositoriesDocument,
   RepositoryOperationsDocument,
   SyncRepositoryDocument,
@@ -17,6 +18,7 @@ import {
   type ProfileQuery,
   type RepositoriesQuery,
   type RepositoryChangeSetsQuery,
+  type RepositoryCanonicalChangeSetsQuery,
   type RepositoryOperationsQuery,
   type ViewerQuery,
   type UpdateProfileInput,
@@ -34,6 +36,7 @@ export type RepositoryOperations = Omit<GeneratedRepositoryOperations, 'activePo
   recentFailures: unknown[]
 }
 export type RepositoryChangeSetDetection = RepositoryChangeSetsQuery['repositoryChangeSets']
+export type RepositoryCanonicalChangeSets = RepositoryCanonicalChangeSetsQuery['repositoryCanonicalChangeSets']
 
 export const orkiaApi = {
   me: async () => (await gql.request(ViewerDocument)).viewer,
@@ -57,6 +60,8 @@ export const orkiaApi = {
   },
   repositoryChangeSets: async (repositoryId: string) =>
     (await gql.request(RepositoryChangeSetsDocument, { repositoryId })).repositoryChangeSets,
+  repositoryCanonicalChangeSets: async (repositoryId: string) =>
+    (await gql.request(RepositoryCanonicalChangeSetsDocument, { repositoryId })).repositoryCanonicalChangeSets,
   syncRepository: async (id: string) => {
     await gql.request(SyncRepositoryDocument, { id })
   },
