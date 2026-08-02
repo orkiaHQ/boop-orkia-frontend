@@ -27,21 +27,16 @@ function Icon(p: { name: IconName; size?: number }) { return <svg class="icon" w
 const views: Record<ViewId, ViewDefinition> = {
   home:{id:'home',title:'Home',icon:'home'}, profile:{id:'profile',title:'killix',icon:'user'}, inbox:{id:'inbox',title:'Inbox',icon:'inbox'}, 'pull-requests':{id:'pull-requests',title:'Pull Requests',icon:'pull'}, repos:{id:'repos',title:'Repos',icon:'repos'}, 'project-operations':{id:'project-operations',title:'Project Ops',icon:'runtime'}, runtime:{id:'runtime',title:'Runtime',icon:'runtime'}, 'live-sessions':{id:'live-sessions',title:'Live Sessions',icon:'sessions'}, analytics:{id:'analytics',title:'Analytics',icon:'analytics'}, 'cto-analytics':{id:'cto-analytics',title:'CTO Analytics',icon:'cto'},
 }
-const fallbackRepos: Repo[] = [
-  {id:'ghostty',owner:'ghostty-org',name:'ghostty',label:'Ghostty',visibility:'Public',mark:'◒',publicPath:'/ghostty-community'},
-  {id:'orkia',owner:'orkia',name:'orkia',label:'Orkia',visibility:'Private',mark:'O'},
-  {id:'agent-runtime',owner:'orkia',name:'agent-runtime',label:'Agent Runtime',visibility:'Private',mark:'A'},
-]
 const groups: Array<[string, ViewId[]]> = [['Operations',['runtime','live-sessions']],['Insights',['analytics','cto-analytics']]]
 const viewTab=(id:ViewId):Tab=>({...views[id],view:id})
-const repoTab=(id:RepoId, repositories:Repo[]=fallbackRepos):Tab=>{const repo=repositories.find(item=>item.id===id||item.name===id)??repositories[0]??fallbackRepos[0];return{id:`repo:${repo.id}`,view:'project-operations',title:repo.name,icon:'repos',repoId:repo.id}}
+const repoTab=(id:RepoId, repositories:Repo[]):Tab|null=>{const repo=repositories.find(item=>item.id===id||item.name===id)??repositories[0];return repo?{id:`repo:${repo.id}`,view:'project-operations',title:repo.name,icon:'repos',repoId:repo.id}:null}
 
 function useWorkspace(repoSource:()=>Repo[]) {
-  const available=()=>repoSource().length?repoSource():fallbackRepos
+  const available=()=>repoSource()
   const cache = createPersistentCache('orkia-workspace')
   const persisted = cache.read<{ tabs: Array<Partial<Tab>&{id:string}>; active: string; theme: 'light' | 'dark'; repo?: RepoId } | null>('session', null)
-  const persistedRepo:RepoId=available().some(item=>item.id===persisted?.repo)?persisted!.repo!:available()[0].id
-  const normalizeTab=(tab:Partial<Tab>&{id:string}):Tab|null=>{if(tab.id==='project-operations')return repoTab(persistedRepo,available());if(tab.id.startsWith('repo:')){const id=tab.id.slice(5) as RepoId;return available().some(item=>item.id===id)?repoTab(id,available()):null}return tab.id in views?viewTab(tab.id as ViewId):null}
+  const persistedRepo:RepoId=available().find(item=>item.id===persisted?.repo)?.id??available()[0]?.id??''
+  const normalizeTab=(tab:Partial<Tab>&{id:string}):Tab|null=>{if(tab.id==='project-operations')return persistedRepo?repoTab(persistedRepo,available()):null;if(tab.id.startsWith('repo:')){const id=tab.id.slice(5) as RepoId;return available().some(item=>item.id===id)?repoTab(id,available()):null}return tab.id in views?viewTab(tab.id as ViewId):null}
   const savedTabs = (persisted?.tabs ?? []).map(normalizeTab).filter((tab):tab is Tab=>Boolean(tab)).filter((tab,index,all)=>all.findIndex(item=>item.id===tab.id)===index)
   const initialActive=()=>{const id=persisted?.active;if(id==='project-operations')return `repo:${persistedRepo}` as TabId;if(id?.startsWith('repo:')&&available().some(item=>`repo:${item.id}`===id))return id as TabId;if(id&&id in views)return id as ViewId;return(savedTabs[0]??viewTab('home')).id}
   const [tabs,setTabs] = createSignal<Tab[]>(savedTabs.length ? savedTabs : [viewTab('home')])
@@ -49,7 +44,7 @@ function useWorkspace(repoSource:()=>Repo[]) {
   const [theme,setTheme] = createSignal<'light'|'dark'>(persisted?.theme ?? 'light')
   const [lastRepo,setLastRepo] = createSignal<RepoId>(persistedRepo)
   createEffect(() => cache.write('session',{tabs:tabs(),active:active(),theme:theme(),repo:lastRepo()}))
-  const openRepo = (id: RepoId) => { const tab=repoTab(id,available());setLastRepo(tab.repoId!);if(!tabs().some(item=>item.id===tab.id))setTabs([...tabs(),tab]);setActive(tab.id) }
+  const openRepo = (id: RepoId) => { const tab=repoTab(id,available());if(!tab)return;setLastRepo(tab.repoId!);if(!tabs().some(item=>item.id===tab.id))setTabs([...tabs(),tab]);setActive(tab.id) }
   const open = (id: ViewId) => { if(id==='project-operations'){openRepo(lastRepo());return}if (!tabs().some(tab => tab.id === id)) setTabs([...tabs(),viewTab(id)]); setActive(id) }
   const activate=(id:TabId)=>{const tab=tabs().find(item=>item.id===id);if(tab?.repoId)setLastRepo(tab.repoId);if(tab)setActive(id)}
   const close = (id: TabId) => { if (tabs().length === 1) return; const index=tabs().findIndex(tab=>tab.id===id); const next=tabs().filter(tab=>tab.id!==id); setTabs(next); if(active()===id)setActive(next[Math.max(0,index-1)].id) }
@@ -82,41 +77,6 @@ function EmptyView(p:{id:()=>ViewId; compose:()=>void; inbox:()=>InboxItem[]}) {
 function Help(p:{close:()=>void}) { const rows=[['G then H','Home'],['G then Y','Your profile'],['G then I','Inbox'],['G then P','Pull Requests'],['G then R','Repos'],['G then O','Project Ops'],['G then U','Runtime'],['G then S','Live Sessions'],['Q','Create new issue'],['⌥ ← / →','Change tab'],['?','Keyboard shortcuts'],['Esc','Close overlay']]; return <div class="overlay" onClick={p.close}><section class="shortcut" role="dialog" aria-modal="true" onClick={e=>e.stopPropagation()}><header><div><p>Orkia workspace</p><h2>Keyboard shortcuts</h2></div><button onClick={p.close}><Icon name="close"/></button></header><For each={rows}>{row=><div><strong>{row[1]}</strong><kbd>{row[0]}</kbd></div>}</For></section></div> }
 function Composer(p:{close:()=>void}) { return <div class="overlay" onClick={p.close}><section class="composer" role="dialog" onClick={e=>e.stopPropagation()}><div><span>Orkia</span><button onClick={p.close}><Icon name="close"/></button></div><input autofocus placeholder="Issue title"/><footer><small>Press ⌘ ↵ to create</small><button class="primary" onClick={p.close}>Create issue</button></footer></section></div> }
 
-const homeNeeds:Array<{repoId:RepoId;kind:string;repo:string;title:string;detail:string;person:string;tone:string}> = [
-  {repoId:'orkia',kind:'Decision',repo:'orkia / orkia',title:'Choose the default contribution gate',detail:'12 replies · evidence verified · waiting since yesterday',person:'MC',tone:'violet'},
-  {repoId:'ghostty',kind:'Review',repo:'ghostty-org / ghostty',title:'Scrollback regression test',detail:'18 lines · all checks passed · Avery requested you',person:'AS',tone:'blue'},
-  {repoId:'agent-runtime',kind:'Attestation',repo:'orkia / agent-runtime',title:'macOS secure input state',detail:'Agent-assisted · 6 files · human review required',person:'AI',tone:'indigo'},
-]
-const homeRecent:Array<{repoId:RepoId;repo:string;summary:string;branch:string;status:string}> = [
-  {repoId:'ghostty',repo:'ghostty-org / ghostty',summary:'Terminal core and community review',branch:'main',status:'2 conversations open'},
-  {repoId:'orkia',repo:'orkia / orkia',summary:'Product direction and gate policy',branch:'product/gates',status:'Decision ready'},
-  {repoId:'agent-runtime',repo:'orkia / agent-runtime',summary:'Agent execution and provenance',branch:'runtime/v2',status:'3 records pending'},
-]
-
-function HomeDashboard(p:{openRepo:(id:RepoId)=>void;compose:()=>void;feed:()=>FeedEntry[]}) {
-  return <section class="page home-page">
-    <header class="home-header"><div><p>Friday, July 31</p><h1>Good afternoon, Issam</h1><span>Move the work that needs your judgment.</span></div><button class="home-new" onClick={p.compose}><Icon name="plus" size={13}/> New issue</button></header>
-    <button class="home-command" onClick={p.compose}><Icon name="search" size={17}/><span><b>Search, ask, or act</b><small>across your organizations and repositories</small></span><kbd>⌘ K</kbd></button>
-    <div class="home-layout"><main>
-      <section class="home-panel attention-panel"><header><div><small>YOUR WORK</small><h2>Needs you</h2></div><span>3 items</span></header><For each={homeNeeds}>{item=><button class="attention-row" onClick={()=>p.openRepo(item.repoId)}><i class={`home-person ${item.tone}`}>{item.person}</i><div><small>{item.kind} · {item.repo}</small><b>{item.title}</b><span>{item.detail}</span></div><em>Open <b>→</b></em></button>}</For></section>
-      <section class="home-section"><header><div><small>CONTEXT</small><h2>Pick up where you left off</h2></div><button>View all repositories</button></header><div class="recent-grid"><For each={homeRecent}>{item=><button class="recent-card" onClick={()=>p.openRepo(item.repoId)}><span><Icon name="repos" size={14}/>{item.repo}</span><b>{item.summary}</b><small><i>⑂</i> {item.branch}</small><em>{item.status}</em></button>}</For></div></section>
-      <section class="home-panel signal-feed"><header><div><small>FEED</small><h2>Worth knowing</h2></div><nav aria-label="Feed filters"><button class="active">Relevant</button><button>Following</button><button>Discover</button></nav></header>
-        <Show when={p.feed().length}><For each={p.feed()}>{entry=><article><div class="feed-source"><i>{entry.kind.slice(0,1).toUpperCase()}</i><span><b>{entry.kind}</b><small>{new Date(entry.occurredAt).toLocaleString()}</small></span><em>From Orkia</em></div><h3>{entry.title}</h3><p>{entry.summary??'Activity persisted by the project.'}</p></article>}</For></Show>
-        <Show when={!p.feed().length}>
-        <article><div class="feed-source"><i class="commutifi">C</i><span><b>Commutifi / helpers</b><small>3 releases grouped · 39 min ago</small></span><em>Work you follow</em></div><h3>Release train v55 reached a stable candidate</h3><p>One production error fix, one new draft state, and a breaking export change were published across three releases.</p><div class="feed-changes"><span><b>Fix</b> Safer production 5xx messages</span><span><b>Breaking</b> Iframe exports moved</span></div><footer><button>Open release</button><button>Show fewer release trains</button></footer></article>
-        <article><div class="feed-source"><i class="gitbutler">G</i><span><b>gitbutlerapp / gitbutler</b><small>Release 0.22.0 · yesterday</small></span><em>Related to your workflow</em></div><h3>Native GitHub stacked pull requests shipped</h3><p>GitButler now creates native stacked pull requests for enrolled repositories, with a compatibility fallback elsewhere.</p><footer><button>Read the release</button><button>Not relevant</button></footer></article>
-        <article class="feed-human"><div class="feed-source"><AvatarLike letters="SY"/><span><b>Seckin Yasar</b><small>Community · 5 days ago</small></span><em>New connection</em></div><h3>Started following your work</h3><p>A contributor working across developer tooling and open source discovered your projects.</p><footer><button>View profile</button><button>Follow back</button></footer></article>
-        </Show>
-        <div class="feed-end"><span>✓</span><div><b>You’re caught up on relevant activity</b><small>23 repetitive events and automated releases were condensed.</small></div><button>Tune feed</button></div>
-      </section>
-      <section class="home-panel community-panel"><header><div><small>COMMUNITY</small><h2>People moving your projects forward</h2></div><button>See all activity</button></header><article><AvatarLike letters="AS"/><div><b>Avery Singh</b><span>attached a verified reproduction to <strong>Scrollback regression</strong></span><small>ghostty-org / ghostty · 34 min ago</small></div><button onClick={()=>p.openRepo('ghostty')}>View</button></article><article><AvatarLike letters="MC"/><div><b>Mira Chen</b><span>summarized the design trade-offs in <strong>Contribution gates</strong></span><small>orkia / orkia · 2h ago</small></div><button onClick={()=>p.openRepo('orkia')}>Reply</button></article><article><AvatarLike letters="JB"/><div><b>Jonas Beck</b><span>opened Friday office hours for new documentation contributors</span><small>ghostty-org / ghostty · yesterday</small></div><button onClick={()=>p.openRepo('ghostty')}>Join</button></article></section>
-    </main><aside class="home-rail">
-      <section class="rail-card focus-card"><header><small>TODAY</small><h2>Your focus</h2></header><p><span>1</span><b>Make the gate decision</b><small>Orkia · before 3 PM</small></p><p><span>2</span><b>Review Avery’s test</b><small>Ghostty · 18 lines</small></p><p><span>3</span><b>Attest agent work</b><small>Agent Runtime · 6 files</small></p><footer>Everything else can wait.</footer></section>
-      <section class="rail-card agent-card"><header><small>AGENTS</small><h2>Waiting for a human</h2></header><button onClick={()=>p.openRepo('agent-runtime')}><span>AI</span><div><b>2 completed records</b><small>Checks passed · ownership unresolved</small></div><i>→</i></button><p>Agents can prepare work. Only people move it forward.</p></section>
-      <section class="rail-card digest-card"><header><small>FROM YOUR ORGANIZATIONS</small><h2>What changed</h2></header><article><i class="green">●</i><div><b>Ghostty docs are unblocked</b><small>Three first-time contributors can proceed</small></div></article><article><i class="purple">●</i><div><b>Orkia gate policy reached v4</b><small>Two rules changed · owner review required</small></div></article><button>Open weekly digest →</button></section>
-    </aside></div>
-  </section>
-}
 
 // Phase 0's authenticated surface must never manufacture repository or activity
 // records while the backend is still loading or has no projection.
@@ -129,27 +89,6 @@ function LiveHomeDashboard(p:{openRepo:(id:RepoId)=>void;repositories:()=>Repo[]
   </section>
 }
 
-const profileOrganizations = ['orkiaHQ','riftrHQ','Commutifi','MonkeyDLabs','siftr-sh','openbackendHQ']
-const profileRhythm = Array.from({length:91},(_,index)=>[0,0,1,2,1,3,0,2,1,4,2,0,1][(index*5+Math.floor(index/7))%13])
-
-function LegacyProfilePage(p:{openRepo:(id:RepoId)=>void}) {
-  return <section class="page profile-page">
-    <nav class="profile-tabs" aria-label="Profile sections"><button class="active">Overview</button><button>Projects</button><button>Activity</button><button>Stars <span>59</span></button></nav>
-    <header class="profile-hero"><img src="https://github.com/Killix.png?size=240" alt="Issam Hakimi"/><div class="profile-identity"><small>PUBLIC PROFILE</small><h1>Issam Hakimi</h1><b>@killix</b><p>Building Orkia — a human-first forge for the agent era.</p><span>⌖ Montreal · Paris · Tunis</span><a href="http://www.iss.am">iss.am ↗</a></div><div class="profile-social"><p><b>36</b><span>followers</span></p><p><b>12</b><span>following</span></p><button>Edit profile</button><button>Share</button></div></header>
-    <div class="profile-layout"><main>
-      <section class="profile-note profile-card"><header><div><small>PROFILE NOTE · WRITTEN BY ISSAM</small><h2>Building infrastructure where humans keep authorship</h2></div><button>Edit note</button></header><p>I’m exploring how software collaboration changes when agents can research, write, test, and propose code. The interesting problem is not making agents look human — it is designing projects where their work stays legible, attributable, and governed by people.</p><p>Right now I’m focused on Orkia, project-local trust, and contribution systems that give maintainers better control without closing the door on newcomers.</p></section>
-      <section class="profile-section"><header><div><small>SELECTED WORK</small><h2>What I’m building now</h2></div><button>View all projects</button></header><div class="profile-projects"><button onClick={()=>p.openRepo('orkia')}><span><i>O</i><em>orkiaHQ / orkia</em><b>Private preview</b></span><h3>A forge designed around humans and agents</h3><p>Community spaces, explainable contribution gates, and project operations in one system.</p><footer><small>Product · Architecture</small><strong>Open project →</strong></footer></button><button onClick={()=>p.openRepo('agent-runtime')}><span><i>R</i><em>riftrHQ / riftr-runtime</em><b>Active</b></span><h3>Execution records that remain inspectable</h3><p>Captures what coding agents changed, ran, cost, and produced across a session.</p><footer><small>Rust · Agent infrastructure</small><strong>Open project →</strong></footer></button><button onClick={()=>p.openRepo('ghostty')}><span><i>G</i><em>Ghostty community study</em><b>Design study</b></span><h3>Open source contribution beyond the file tree</h3><p>A product exploration around project voice, human context, and progressive trust.</p><footer><small>Research · Product design</small><strong>Open study →</strong></footer></button></div></section>
-      <section class="profile-card roles-card"><header><div><small>PROJECT-LOCAL ROLES</small><h2>Responsibility, with its source</h2></div><span>No global score</span></header><article><i>O</i><div><b>orkiaHQ / orkia</b><small>Owner · product direction and contribution policy</small></div><em>Granted by project owners</em><button onClick={()=>p.openRepo('orkia')}>View</button></article><article><i>R</i><div><b>riftrHQ / riftr-runtime</b><small>Maintainer · runtime architecture and provenance</small></div><em>Earned through 18 accepted changes</em><button onClick={()=>p.openRepo('agent-runtime')}>View</button></article><article><i>C</i><div><b>Commutifi / api-analytic-rs</b><small>Contributor · Rust APIs and reliability</small></div><em>Verified by repository history</em><button>View</button></article><footer>Roles are scoped to a project, explainable, and revocable by that community.</footer></section>
-      <section class="profile-card activity-card"><header><div><small>RECENT ACTIVITY</small><h2>Work with clear authorship</h2></div><button>See full activity</button></header><article><span class="human">IH</span><div><small>HUMAN-AUTHORED · ORKIAHQ / ORKIA</small><b>Defined contribution gate policy v4</b><p>Wrote the decision model and incorporated feedback from 12 community replies.</p></div><time>Today</time></article><article><span class="agent">AI</span><div><small>AGENT-ASSISTED · RIFTRHQ / RIFTR-RUNTIME</small><b>Added session provenance records</b><p>Codex prepared implementation and tests · 6 files · reviewed and attested by Issam.</p></div><time>Yesterday</time></article><article><span class="human">IH</span><div><small>HUMAN-DIRECTED · DESIGN STUDY</small><b>Reframed the open source repository homepage</b><p>Research, synthesis, and product direction remain attributed separately from generated artifacts.</p></div><time>Jul 30</time></article></section>
-    </main><aside class="profile-rail">
-      <section class="profile-card now-card"><header><small>NOW</small><h2>Current focus</h2></header><p><b>Orkia product direction</b><span>Designing the authenticated home and public project surfaces.</span></p><p><b>Agent provenance</b><span>Making assisted work inspectable without reducing people to a score.</span></p><footer><i></i> Active this week</footer></section>
-      <section class="profile-card rhythm-card"><header><small>CONTRIBUTION RHYTHM</small><h2>Showing up across the work</h2></header><div><For each={profileRhythm}>{level=><i class={`level-${level}`}></i>}</For></div><p>Includes code, reviews, discussions, and project decisions — not just commits.</p></section>
-      <section class="profile-card collaboration-card"><header><small>COLLABORATION</small><h2>Works well with me</h2></header><p><span>✓</span><b>Start with context</b><small>Explain the user or project need before the solution.</small></p><p><span>✓</span><b>Bring evidence</b><small>Reproductions and trade-offs move decisions faster.</small></p><p><span>✓</span><b>Async first</b><small>Written proposals before meetings.</small></p></section>
-      <section class="profile-card disclosure-card"><header><small>AGENT DISCLOSURE</small><h2>Assistance stays visible</h2></header><p>Agent-assisted changes disclose the tool, scope, checks, and human attestation on each record.</p><button>View assisted work →</button></section>
-      <section class="profile-card organizations-card"><header><small>ORGANIZATIONS</small><h2>Communities</h2></header><div><For each={profileOrganizations}>{(organization,index)=><button><i>{organization.slice(0,1)}</i><span>{organization}</span><Show when={index()===0||index()===1}><em>Core</em></Show></button>}</For></div><footer>+ 7 more organizations</footer></section>
-    </aside></div>
-  </section>
-}
 
 function profilePayloadField(payload:unknown,key:string) {
   return payload && typeof payload==='object' && key in payload ? String((payload as Record<string,unknown>)[key]??'') : ''
@@ -197,17 +136,6 @@ function ProfilePage(p:{openRepo:(id:RepoId)=>void;profile:()=>Profile|undefined
   }}</Show>
 }
 
-const opsReviews = [
-  ['Document the OpenGL fallback','Jonas · Docs · 42 lines','Review Friday','blue'],
-  ['Scrollback regression test','Avery · Tests · 18 lines','Reviewing','green'],
-  ['Clarify configuration errors','Mira · UX · 67 lines','Design review Thu','purple'],
-]
-const opsProposals = [
-  ['Multiline prompt paste','12 replies · evidence attached','Needs direction'],
-  ['Windows PTY compliance','9 replies · reproduction verified','Ready to accept'],
-  ['Default color palette','8 replies · screenshots attached','Needs design owner'],
-]
-
 type ChangeSetDetectionRow = { id:string; title:string; confidence:string; memberCount:number; computedAt:string|null }
 
 function normalizeChangeSetDetections(value:RepositoryChangeSetDetection):ChangeSetDetectionRow[] {
@@ -229,7 +157,7 @@ function ChangeSetDetectionCard(p:{rows:()=>ChangeSetDetectionRow[]}) {
   return <section class="ops-card ops-wide change-detection-card"><header><div><small>CHANGE SET DETECTION</small><h2>Related work observed by the backend</h2></div><span class="detection-badge">evidence projection</span></header><Show when={p.rows().length} fallback={<p class="ops-empty">No related multi-repository work has been detected for this repository yet.</p>}><For each={p.rows()}>{row=><div class="ops-row"><span class="ops-dot"></span><div><b>{row.title}</b><small>{row.id} · {row.memberCount} member{row.memberCount===1?'':'s'}</small></div><em>{row.confidence} confidence</em><i>→</i></div>}</For></Show><footer>Detection is an evidence projection; the canonical multi-repository ChangeSet remains signed by Orkia.</footer></section>
 }
 
-type CanonicalChangeSetRow = { id:string; revision:number; status:string; stackCount:number; dependencyCount:number; proofCount:number; signerId:string }
+type CanonicalChangeSetRow = { id:string; revision:number; status:string; stackCount:number; dependencyCount:number; proofCount:number; signerId:string; sessionIds:string[]; validationCount:number }
 
 function normalizeCanonicalChangeSets(value:RepositoryCanonicalChangeSets):CanonicalChangeSetRow[] {
   if (!Array.isArray(value)) return []
@@ -237,6 +165,8 @@ function normalizeCanonicalChangeSets(value:RepositoryCanonicalChangeSets):Canon
     if (!item || typeof item !== 'object') return []
     const row=item as Record<string, unknown>
     const payload=typeof row.payload==='object'&&row.payload?row.payload as Record<string, unknown>:{}
+    const proofs=Array.isArray(payload.proofs)?payload.proofs.filter((proof):proof is Record<string, unknown>=>Boolean(proof&&typeof proof==='object')):[]
+    const sessionIds=[...new Set(proofs.flatMap(proof=>typeof proof.session_id==='string'?[proof.session_id]:[]))]
     return [{
       id:typeof row.changeset_id==='string'?row.changeset_id:'unknown',
       revision:typeof row.revision==='number'?row.revision:0,
@@ -245,6 +175,8 @@ function normalizeCanonicalChangeSets(value:RepositoryCanonicalChangeSets):Canon
       dependencyCount:Array.isArray(payload.depends_on)?payload.depends_on.length:0,
       proofCount:Array.isArray(payload.proofs)?payload.proofs.length:0,
       signerId:typeof payload.signer_id==='string'?payload.signer_id:'unknown',
+      sessionIds,
+      validationCount:proofs.reduce((total,proof)=>total+(typeof proof.validation_count==='number'?proof.validation_count:0),0),
     }]
   })
 }
@@ -255,7 +187,7 @@ function CanonicalChangeSetCard(p:{rows:()=>CanonicalChangeSetRow[]}) {
 
 function Phase0EvidenceCards(p:{operations:()=>RepositoryOperations|undefined;rows:()=>CanonicalChangeSetRow[]}) {
   const ops=()=>p.operations()
-  return <div class="ops-grid"><section class="ops-card ops-wide"><header><div><small>CAPTURE PROVENANCE</small><h2>Session evidence and signed proofs</h2></div><span class="detection-badge">repository ledger</span></header><Show when={p.rows().length} fallback={<p class="ops-empty">No captured session has published a signed ChangeSet for this repository.</p>}><For each={p.rows()}>{row=><div class="ops-row"><span class="ops-dot"></span><div><b>ChangeSet {row.id}</b><small>revision {row.revision} · signer {row.signerId} · {row.proofCount} signed proof{row.proofCount===1?'':'s'}</small></div><em>{row.status}</em><i>✓</i></div>}</For></Show><footer>Prompts, tool calls, file writes and validations stay in the signed Git ledger; the backend displays only verified ChangeSet proofs.</footer></section><section class="ops-card"><header><div><small>VALIDATION STATE</small><h2>Policy and synchronization</h2></div></header><div class="ops-policy"><p><span>✓</span><b>Policy</b><small>{ops()?.activePolicy?`v${ops()!.activePolicy!.version} active`:'not reported by backend'}</small></p><p><span>✓</span><b>Gates</b><small>{ops()?.pendingGates??'not reported'} pending</small></p><p><span>✓</span><b>Sync</b><small>{ops()?.pendingSync??'not reported'} pending · {ops()?.failedSync??'not reported'} failed</small></p><p><span>✓</span><b>Review</b><small>{ops()?.pendingReviews??'not reported'} pending</small></p></div></section></div>
+  return <div class="ops-grid"><section class="ops-card ops-wide"><header><div><small>CAPTURE PROVENANCE</small><h2>Session evidence and signed proofs</h2></div><span class="detection-badge">repository ledger</span></header><Show when={p.rows().length} fallback={<p class="ops-empty">No captured session has published a signed ChangeSet for this repository.</p>}><For each={p.rows()}>{row=><div class="ops-row"><span class="ops-dot"></span><div><b>ChangeSet {row.id}</b><small>revision {row.revision} · {row.sessionIds.length?`session ${row.sessionIds.join(', ')}`:'session unavailable'} · signer {row.signerId} · {row.proofCount} signed proof{row.proofCount===1?'':'s'} · {row.validationCount} validation{row.validationCount===1?'':'s'}</small></div><em>{row.status}</em><i>✓</i></div>}</For></Show><footer>Prompts, tool calls, file writes and validations stay in the signed Git ledger; the backend displays only verified ChangeSet proofs.</footer></section><section class="ops-card"><header><div><small>VALIDATION STATE</small><h2>Policy and synchronization</h2></div></header><div class="ops-policy"><p><span>✓</span><b>Policy</b><small>{ops()?.activePolicy?`v${ops()!.activePolicy!.version} active`:'not reported by backend'}</small></p><p><span>✓</span><b>Gates</b><small>{ops()?.pendingGates??'not reported'} pending</small></p><p><span>✓</span><b>Sync</b><small>{ops()?.pendingSync??'not reported'} pending · {ops()?.failedSync??'not reported'} failed</small></p><p><span>✓</span><b>Review</b><small>{ops()?.pendingReviews??'not reported'} pending</small></p></div></section></div>
 }
 
 function ProjectOperations(p:{repo:()=>Repo;operations:()=>RepositoryOperations|undefined;changeSets:()=>RepositoryChangeSetDetection;canonicalChangeSets:()=>RepositoryCanonicalChangeSets}) {
@@ -263,7 +195,6 @@ function ProjectOperations(p:{repo:()=>Repo;operations:()=>RepositoryOperations|
   const detectionRows=()=>normalizeChangeSetDetections(p.changeSets())
   const canonicalRows=()=>normalizeCanonicalChangeSets(p.canonicalChangeSets())
   return <section class="page ops-page"><header class="ops-header"><div><p>Authenticated workspace · {project().visibility} repository · Maintainer access</p><h1>{project().label} operations</h1></div><Show when={project().publicPath}><a href={project().publicPath}>Open public project ↗</a></Show></header><div class="ops-summary"><article><small>Needs a decision</small><b>{p.operations()?.openConflicts??'—'}</b><span>{p.operations()?'conflicts reported':'not reported by backend'}</span></article><article><small>Human review</small><b>{p.operations()?.pendingReviews??'—'}</b><span>{p.operations()?`${p.operations()?.openPullRequests??0} open pull requests`:'not reported by backend'}</span></article><article><small>Policy health</small><b>{p.operations()?.activePolicy?`v${p.operations()!.activePolicy!.version}`:'—'}</b><span>{p.operations()?.activePolicy?'active policy':'not reported by backend'}</span></article><article><small>GitHub sync</small><b>{p.operations()?.pendingSync??'—'}</b><span>{p.operations()?`${p.operations()?.failedSync??0} failed operations`:'not reported by backend'}</span></article></div><CanonicalChangeSetCard rows={canonicalRows}/><ChangeSetDetectionCard rows={detectionRows}/><Phase0EvidenceCards operations={()=>p.operations()} rows={canonicalRows}/></section>
-  return <section class="page ops-page"><header class="ops-header"><div><p>Authenticated workspace · {project().visibility} repository · Maintainer access</p><h1>{project().label} operations</h1></div><Show when={project().publicPath}><a href={project().publicPath}>Open public project ↗</a></Show></header><div class="ops-summary"><article><small>Needs a decision</small><b>{p.operations()?.openConflicts??3} conflicts</b><span>Concurrent versions require a human</span></article><article><small>Human review</small><b>{p.operations()?.pendingReviews??3} changes</b><span>{p.operations()?.openPullRequests??0} open pull requests</span></article><article><small>Policy health</small><b>v{p.operations()?.activePolicy?.version??4} active</b><span>{p.operations()?.pendingGates??0} gates pending</span></article><article><small>GitHub sync</small><b>{p.operations()?.pendingSync??2} pending</b><span>{p.operations()?.failedSync??0} failed operations</span></article></div><CanonicalChangeSetCard rows={canonicalRows}/><ChangeSetDetectionCard rows={detectionRows}/><div class="ops-grid"><section class="ops-card ops-wide"><header><div><small>TRIAGE</small><h2>Proposals needing a project decision</h2></div><button>View all</button></header><For each={opsProposals}>{item=><button class="ops-row"><span class="ops-dot"></span><div><b>{item[0]}</b><small>{item[1]}</small></div><em>{item[2]}</em><i>→</i></button>}</For></section><section class="ops-card"><header><div><small>CAPACITY</small><h2>Maintainers and mentors</h2></div><button>Schedule</button></header><div class="ops-people"><p><AvatarLike letters="MC"/><span><b>Mira Chen</b><small>Design · reviews Thursday</small></span><i class="free">●</i></p><p><AvatarLike letters="LM"/><span><b>Lea Martin</b><small>Terminal core · paused until Aug 12</small></span><i>●</i></p><p><AvatarLike letters="JB"/><span><b>Jonas Beck</b><small>Docs · office hours Friday</small></span><i class="free">●</i></p><p><AvatarLike letters="AS"/><span><b>Avery Singh</b><small>Windows · reproductions welcome</small></span><i class="free">●</i></p></div></section><section class="ops-card ops-wide"><header><div><small>REVIEW QUEUE</small><h2>Changes waiting for human judgment</h2></div><button>Assign reviews</button></header><For each={opsReviews}>{item=><button class="ops-row"><span class={`ops-avatar ${item[3]}`}>{item[0].slice(0,1)}</span><div><b>{item[0]}</b><small>{item[1]}</small></div><em>{item[2]}</em><i>→</i></button>}</For></section><section class="ops-card"><header><div><small>CONTRIBUTION POLICY</small><h2>{project().label} policy v4</h2></div><button>Configure</button></header><div class="ops-policy"><p><span>1</span><b>Proposal accepted</b><small>Required for code</small></p><p><span>2</span><b>Evidence record</b><small>Always available</small></p><p><span>3</span><b>Checks by code area</b><small>18 required</small></p><p><span>4</span><b>Qualified owner review</b><small>Human decision</small></p></div><footer>No vouch is mandatory. Sponsorship can accelerate routing, never replace checks.</footer></section><section class="ops-card ops-wide"><header><div><small>PROVENANCE</small><h2>Agent-assisted work awaiting attestation</h2></div><button>View records</button></header><div class="ops-provenance"><article><span>AI</span><div><b>macOS secure input state</b><small>Claude Code · implementation and tests · 6 files</small></div><p><b>18/18 checks</b><small>Human review pending</small></p><button>Review record</button></article><article><span>AI</span><div><b>Configuration reload documentation</b><small>Codex · research and draft · 2 files</small></div><p><b>6/6 checks</b><small>Jonas attested</small></p><button>Open change</button></article></div></section><section class="ops-card"><header><div><small>PROJECT ACCESS</small><h2>Progressive permissions</h2></div><button>Manage</button></header><div class="ops-access"><p><b>18</b><span>Evidence contributors</span></p><p><b>7</b><span>Code contributors</span></p><p><b>4</b><span>Qualified reviewers</span></p><p><b>2</b><span>Project owners</span></p></div><footer>Permissions are project-local, scoped, explainable, and revocable.</footer></section></div></section>
 }
 
 function AvatarLike(p:{letters:string}) { return <span class="ops-avatar">{p.letters}</span> }
@@ -288,7 +219,7 @@ function App(p:{viewer:Viewer}) {
   let githubImportStarted=false
   createEffect(()=>{if(profileQuery.data&&repositoryQuery.isSuccess&&repositoryQuery.data?.length===0&&!githubImportStarted){githubImportStarted=true;githubImport.mutate()}})
   const liveRepos=():Repo[]=>(repositoryQuery.data??[]).map(repo=>({id:repo.id,owner:repo.namespace,name:repo.slug,label:repo.displayName,visibility:repo.visibility==='private'?'Private':'Public',mark:repo.slug.slice(0,1).toUpperCase(),publicPath:repo.visibility==='public'?`/${repo.slug}-community`:undefined}))
-  const availableRepos=()=>liveRepos().length?liveRepos():fallbackRepos
+  const availableRepos=()=>liveRepos()
   const app=useWorkspace(availableRepos); const [help,setHelp]=createSignal(false); const [composer,setComposer]=createSignal(false)
   const currentTab=()=>app.tabs().find(tab=>tab.id===app.active())??app.tabs()[0]
   const currentRepo=()=>availableRepos().find(repo=>repo.id===currentTab().repoId)??availableRepos()[0]
